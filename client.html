@@ -1,0 +1,82 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<title>Websockets test</title>
+	<style>
+		#playfield {
+			width: 300px;
+			height: 300px;
+			background-color: #CCC;
+		}
+		.player {
+			float:left;
+			position: relative;
+			left: 0px;
+			top: 0px;
+			width: 30px;
+			height: 30px;
+			background-color: #444;
+		}
+	</style>
+</head>
+<body>
+	<div id="playfield">
+	</div>
+	<p>Connection status: <span id="connectStatus">disconnected</span></p>
+	<script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+	<script src="http://localhost:8089/socket.io/socket.io.js"></script>
+	<script>
+		function guidGenerator() {
+			var S4 = function() {
+				return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+			};
+			return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
+		}
+
+	
+		$(document).ready(function(){
+			var socket,
+				playerId = guidGenerator();
+			
+			if (typeof io !== 'undefined') {
+				socket = io.connect('http://localhost:8089');	
+			} else {
+				socket = {};
+				socket.on = function(){ };
+				socket.emit = function(){ };
+			}
+			
+			socket.on('handshake', function (data) {
+				if (data.connected) {
+					$('#connectStatus').html('connected');
+					socket.emit('enterworld', playerId);
+				} else {
+					$('#connectStatus').html('disconnected');
+				}
+			});
+			
+			socket.on('createplayer', function(data){
+				$('#playfield').append(
+					$('<div></div>').attr({id: data.playerId}).addClass('player')
+				);
+			});
+			
+			socket.on('setblock', function (data){  
+				$('#' + data.player).offset({
+					top: data.top,
+					left: data.left
+				});
+			});
+			
+			$('#playfield').click(function(e){
+				var moveable = {
+					player: playerId,
+					top: (e.pageY - $(this).offset().top),
+					left: (e.pageX - $(this).offset().left)
+				}
+				socket.emit('gridclick', moveable);
+			});
+		});
+	</script>
+</body>
+</html>
